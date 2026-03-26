@@ -9,7 +9,7 @@ Use this setup if YouTube extraction is blocked on hosted backends.
 From `backend/`:
 
 ```powershell
-.\venv\Scripts\python.exe -m uvicorn main:app --host 127.0.0.1 --port 5000 --reload
+.\venv\Scripts\python.exe -m uvicorn main:app --host 127.0.0.1 --port 5001 --reload
 ```
 
 ### 2) Expose local backend with HTTPS tunnel
@@ -17,7 +17,7 @@ From `backend/`:
 Example with Cloudflare Tunnel:
 
 ```powershell
-cloudflared tunnel --url http://127.0.0.1:5000
+cloudflared tunnel --url http://127.0.0.1:5001
 ```
 
 Copy the generated `https://...trycloudflare.com` URL.
@@ -55,6 +55,9 @@ Restart backend after `.env` changes.
 4. On phone (same Wi-Fi), open:
    - `https://podnotes-frontend.vercel.app`
 5. Keep laptop awake and both terminal windows running during demo.
+6. If mobile still calls an old tunnel URL, clear app/site data and relaunch:
+   - Android Chrome: Site settings -> Storage -> Clear & reset
+   - iPhone Safari: Settings -> Safari -> Advanced -> Website Data -> remove site
 
 ---
 

@@ -13,10 +13,10 @@ export default defineConfig(({ mode }) => ({
     headers: {
       "Cross-Origin-Opener-Policy": "same-origin-allow-popups",
     },
-    // Dev: browser calls same-origin /api/* → forwarded to FastAPI (avoids wrong server on :5000).
+    // Dev: browser calls same-origin /api/* → forwarded to FastAPI.
     proxy: {
       "/api": {
-        target: "http://127.0.0.1:5000",
+        target: "http://127.0.0.1:5001",
         changeOrigin: true,
       },
     },
