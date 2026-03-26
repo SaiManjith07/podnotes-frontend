@@ -119,9 +119,15 @@
     @apply border-border;
   }
 
+  html {
+    -webkit-text-size-adjust: 100%;
+    -webkit-tap-highlight-color: transparent;
+  }
+
   body {
     @apply bg-background text-foreground antialiased;
     font-family: 'DM Sans', sans-serif;
+    overflow-x: hidden;
   }
 
   h1, h2, h3, h4, h5, h6 {
@@ -160,6 +166,25 @@
 
   .text-balance {
     text-wrap: balance;
+  }
+
+  /* iOS / notched devices: use with fixed headers and full-bleed layouts */
+  .safe-px {
+    padding-left: max(1rem, env(safe-area-inset-left, 0px));
+    padding-right: max(1rem, env(safe-area-inset-right, 0px));
+  }
+
+  .safe-pt {
+    padding-top: max(0.5rem, env(safe-area-inset-top, 0px));
+  }
+
+  .safe-pb {
+    padding-bottom: max(0.5rem, env(safe-area-inset-bottom, 0px));
+  }
+
+  .min-h-screen-safe {
+    min-height: 100dvh;
+    min-height: 100svh;
   }
 }
 

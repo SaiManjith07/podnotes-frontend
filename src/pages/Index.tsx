@@ -1,6 +1,4 @@
-import { useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContext';
+import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { 
   Headphones, 
@@ -12,15 +10,6 @@ import {
 } from 'lucide-react';
 
 export default function Index() {
-  const { user, isLoading } = useAuth();
-  const navigate = useNavigate();
-
-  useEffect(() => {
-    if (!isLoading && user) {
-      navigate('/dashboard');
-    }
-  }, [user, isLoading, navigate]);
-
   const features = [
     {
       icon: Zap,
@@ -45,7 +34,7 @@ export default function Index() {
   ];
 
   return (
-    <div className="min-h-screen gradient-warm relative overflow-hidden">
+    <div className="min-h-screen-safe gradient-warm relative overflow-x-hidden">
       {/* Background decorations */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-20 right-20 w-96 h-96 rounded-full bg-primary/10 blur-3xl animate-float" />
@@ -53,16 +42,16 @@ export default function Index() {
       </div>
 
       {/* Header */}
-      <header className="relative z-10 container max-w-6xl mx-auto px-4 py-6">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl gradient-primary flex items-center justify-center">
-              <Headphones className="w-5 h-5 text-primary-foreground" />
+      <header className="relative z-10 container max-w-6xl mx-auto safe-px py-4 sm:py-6 safe-pt">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 shrink-0 rounded-xl gradient-primary flex items-center justify-center">
+              <Headphones className="w-4 h-4 sm:w-5 sm:h-5 text-primary-foreground" />
             </div>
-            <span className="text-xl font-display font-bold text-foreground">PodNotes</span>
+            <span className="text-lg sm:text-xl font-display font-bold text-foreground truncate">PodNotes</span>
           </div>
-          <Link to="/auth">
-            <Button variant="outline" className="font-body">
+          <Link to="/auth" className="shrink-0">
+            <Button variant="outline" className="font-body min-h-[44px] sm:min-h-10 px-4">
               Sign In
             </Button>
           </Link>
@@ -70,44 +59,44 @@ export default function Index() {
       </header>
 
       {/* Hero Section */}
-      <main className="relative z-10 container max-w-6xl mx-auto px-4 pt-20 pb-32">
+      <main className="relative z-10 container max-w-6xl mx-auto safe-px pt-10 sm:pt-20 pb-20 sm:pb-32 safe-pb">
         <div className="text-center max-w-3xl mx-auto">
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 text-primary mb-6 animate-slide-up">
-            <Sparkles className="w-4 h-4" />
-            <span className="text-sm font-medium font-body">AI-Powered Podcast Notes</span>
+          <div className="inline-flex items-center justify-center gap-2 px-3 sm:px-4 py-2 rounded-full bg-primary/10 text-primary mb-5 sm:mb-6 animate-slide-up max-w-full">
+            <Sparkles className="w-4 h-4 shrink-0" />
+            <span className="text-xs sm:text-sm font-medium font-body">AI-Powered Podcast Notes</span>
           </div>
 
-          <h1 className="text-5xl md:text-6xl lg:text-7xl font-display font-bold text-foreground mb-6 animate-slide-up delay-100">
+          <h1 className="text-3xl sm:text-5xl md:text-6xl lg:text-7xl font-display font-bold text-foreground mb-5 sm:mb-6 animate-slide-up delay-100 text-balance px-1 leading-tight sm:leading-normal">
             Transform podcasts into{' '}
             <span className="bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
               actionable insights
             </span>
           </h1>
 
-          <p className="text-xl text-muted-foreground font-body mb-10 animate-slide-up delay-200 max-w-2xl mx-auto">
+          <p className="text-base sm:text-lg md:text-xl text-muted-foreground font-body mb-8 sm:mb-10 animate-slide-up delay-200 max-w-2xl mx-auto text-pretty px-1">
             Paste a YouTube link, and let AI transcribe, summarize, and answer your questions. 
             Never miss a key insight again.
           </p>
 
-          <div className="flex flex-col sm:flex-row gap-4 justify-center animate-slide-up delay-300">
-            <Link to="/auth">
-              <Button size="lg" className="gradient-primary text-primary-foreground font-body font-medium px-8 hover:opacity-90 transition-opacity">
+          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center animate-slide-up delay-300 max-w-md sm:max-w-none mx-auto sm:mx-0">
+            <Link to="/auth" className="w-full sm:w-auto">
+              <Button size="lg" className="w-full sm:w-auto min-h-[48px] gradient-primary text-primary-foreground font-body font-medium px-8 hover:opacity-90 transition-opacity">
                 Get Started Free
                 <ArrowRight className="w-4 h-4 ml-2" />
               </Button>
             </Link>
-            <Button size="lg" variant="outline" className="font-body">
+            <Button size="lg" variant="outline" className="font-body w-full sm:w-auto min-h-[48px]" type="button">
               Watch Demo
             </Button>
           </div>
         </div>
 
         {/* Features Grid */}
-        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mt-24">
+        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mt-16 sm:mt-24">
           {features.map((feature, index) => (
             <div 
               key={feature.title}
-              className="p-6 rounded-2xl bg-card border border-border hover:border-primary/50 hover:shadow-lg transition-all animate-slide-up group"
+              className="p-4 sm:p-6 rounded-2xl bg-card border border-border hover:border-primary/50 hover:shadow-lg transition-all animate-slide-up group"
               style={{ animationDelay: `${400 + index * 100}ms` }}
             >
               <div className="w-12 h-12 rounded-xl gradient-primary flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
@@ -138,8 +127,8 @@ export default function Index() {
       </main>
 
       {/* Footer */}
-      <footer className="relative z-10 border-t border-border bg-card/50 backdrop-blur-sm">
-        <div className="container max-w-6xl mx-auto px-4 py-8">
+      <footer className="relative z-10 border-t border-border bg-card/50 backdrop-blur-sm safe-pb">
+        <div className="container max-w-6xl mx-auto safe-px py-6 sm:py-8">
           <div className="flex flex-col md:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-3">
               <div className="w-8 h-8 rounded-lg gradient-primary flex items-center justify-center">

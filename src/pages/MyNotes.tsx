@@ -17,6 +17,7 @@ import {
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import ProcessPodcastModal from '@/components/ProcessPodcastModal';
+import UserProfileMenu from '@/components/UserProfileMenu';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -59,43 +60,47 @@ export default function MyNotes() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen-safe bg-background">
       {/* Header */}
-      <header className="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-50">
-        <div className="container max-w-6xl mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
+      <header className="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-50 safe-pt">
+        <div className="container max-w-6xl mx-auto safe-px py-3 sm:py-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center gap-2 min-w-0">
               <Button 
                 variant="ghost" 
                 size="sm" 
                 onClick={() => navigate('/dashboard')}
-                className="font-body"
+                className="font-body shrink-0 h-10 px-2 sm:px-3"
+                aria-label="Back to dashboard"
               >
-                <ArrowLeft className="w-4 h-4 mr-2" />
-                Back
+                <ArrowLeft className="w-4 h-4 sm:mr-2" />
+                <span className="hidden sm:inline">Back</span>
               </Button>
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl gradient-primary flex items-center justify-center">
-                  <Headphones className="w-5 h-5 text-primary-foreground" />
+              <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
+                <div className="w-9 h-9 sm:w-10 sm:h-10 shrink-0 rounded-xl gradient-primary flex items-center justify-center">
+                  <Headphones className="w-4 h-4 sm:w-5 sm:h-5 text-primary-foreground" />
                 </div>
-                <h1 className="text-xl font-display font-bold text-foreground">My Notes</h1>
+                <h1 className="text-lg sm:text-xl font-display font-bold text-foreground truncate">My Notes</h1>
               </div>
             </div>
-            <Button 
-              onClick={() => setIsProcessModalOpen(true)}
-              className="gradient-primary text-primary-foreground font-body"
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              Add Podcast
-            </Button>
+            <div className="flex items-center gap-2 w-full sm:w-auto sm:justify-end">
+              <UserProfileMenu />
+              <Button 
+                onClick={() => setIsProcessModalOpen(true)}
+                className="gradient-primary text-primary-foreground font-body flex-1 sm:flex-initial h-11 sm:h-10 min-h-[44px] sm:min-h-0"
+              >
+                <Plus className="w-4 h-4 sm:mr-2" />
+                Add Podcast
+              </Button>
+            </div>
           </div>
         </div>
       </header>
 
-      <main className="container max-w-6xl mx-auto px-4 py-8">
+      <main className="container max-w-6xl mx-auto safe-px py-6 sm:py-8 safe-pb">
         {/* Search */}
         <div className="mb-8 animate-slide-up">
-          <div className="relative max-w-md">
+          <div className="relative w-full max-w-md">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
               type="text"
@@ -134,7 +139,7 @@ export default function MyNotes() {
             </CardContent>
           </Card>
         ) : (
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
             {filteredNotes.map((note, index) => (
               <Card 
                 key={note.id}
@@ -176,7 +181,8 @@ export default function MyNotes() {
                         <Button
                           variant="ghost"
                           size="sm"
-                          className="text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
+                          className="text-muted-foreground hover:text-destructive opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity h-10 w-10 p-0 shrink-0"
+                          aria-label="Delete note"
                         >
                           <Trash2 className="w-4 h-4" />
                         </Button>

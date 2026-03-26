@@ -11,17 +11,17 @@ import {
   Plus, 
   FileText, 
   Clock, 
-  LogOut, 
   Sparkles,
   ChevronRight,
   Play
 } from 'lucide-react';
 import ProcessPodcastModal from '@/components/ProcessPodcastModal';
+import UserProfileMenu from '@/components/UserProfileMenu';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 
 export default function Dashboard() {
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const { notes } = useNotes();
   const navigate = useNavigate();
   const [isProcessModalOpen, setIsProcessModalOpen] = useState(false);
@@ -42,47 +42,45 @@ export default function Dashboard() {
 
   const recentNotes = notes.slice(0, 3);
 
-  const handleLogout = () => {
-    logout();
-    navigate('/auth');
-  };
-
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen-safe bg-background">
       {/* Header */}
-      <header className="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-50">
-        <div className="container max-w-6xl mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl gradient-primary flex items-center justify-center">
-                <Headphones className="w-5 h-5 text-primary-foreground" />
+      <header className="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-50 safe-pt">
+        <div className="container max-w-6xl mx-auto safe-px py-3 sm:py-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center justify-between gap-2 min-w-0 sm:justify-start">
+              <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+                <div className="w-9 h-9 sm:w-10 sm:h-10 shrink-0 rounded-xl gradient-primary flex items-center justify-center">
+                  <Headphones className="w-4 h-4 sm:w-5 sm:h-5 text-primary-foreground" />
+                </div>
+                <h1 className="text-lg sm:text-xl font-display font-bold text-foreground truncate">PodNotes</h1>
               </div>
-              <h1 className="text-xl font-display font-bold text-foreground">PodNotes</h1>
+              <div className="flex items-center gap-1 sm:hidden shrink-0">
+                <Link to="/my-notes">
+                  <Button variant="ghost" size="icon" className="font-body h-10 w-10" aria-label="My Notes">
+                    <FileText className="w-4 h-4" />
+                  </Button>
+                </Link>
+                <UserProfileMenu />
+              </div>
             </div>
-            <div className="flex items-center gap-4">
+            <div className="hidden sm:flex items-center gap-3">
               <Link to="/my-notes">
                 <Button variant="ghost" size="sm" className="font-body">
                   <FileText className="w-4 h-4 mr-2" />
                   My Notes
                 </Button>
               </Link>
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                onClick={handleLogout}
-                className="text-muted-foreground hover:text-destructive font-body"
-              >
-                <LogOut className="w-4 h-4" />
-              </Button>
+              <UserProfileMenu />
             </div>
           </div>
         </div>
       </header>
 
-      <main className="container max-w-6xl mx-auto px-4 py-8">
+      <main className="container max-w-6xl mx-auto safe-px py-6 sm:py-8 safe-pb">
         {/* Welcome Section */}
-        <div className="mb-8 animate-slide-up">
-          <h2 className="text-3xl font-display font-bold text-foreground mb-2">
+        <div className="mb-6 sm:mb-8 animate-slide-up">
+          <h2 className="text-2xl sm:text-3xl font-display font-bold text-foreground mb-2 text-balance">
             Welcome back! 👋
           </h2>
           <p className="text-muted-foreground font-body">
@@ -91,16 +89,16 @@ export default function Dashboard() {
         </div>
 
         {/* Add Podcast CTA */}
-        <Card className="mb-8 border-2 border-dashed border-primary/30 bg-gradient-to-br from-primary/5 to-accent/5 hover:border-primary/50 transition-colors cursor-pointer group animate-slide-up delay-100"
+        <Card className="mb-6 sm:mb-8 border-2 border-dashed border-primary/30 bg-gradient-to-br from-primary/5 to-accent/5 hover:border-primary/50 transition-colors cursor-pointer group animate-slide-up delay-100"
           onClick={() => setIsProcessModalOpen(true)}>
-          <CardContent className="p-8 text-center">
-            <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl gradient-primary mb-4 group-hover:scale-110 transition-transform">
-              <Plus className="w-8 h-8 text-primary-foreground" />
+          <CardContent className="p-5 sm:p-8 text-center">
+            <div className="inline-flex items-center justify-center w-14 h-14 sm:w-16 sm:h-16 rounded-2xl gradient-primary mb-4 group-active:scale-105 sm:group-hover:scale-110 transition-transform">
+              <Plus className="w-7 h-7 sm:w-8 sm:h-8 text-primary-foreground" />
             </div>
-            <h3 className="text-xl font-display font-semibold text-foreground mb-2">
+            <h3 className="text-lg sm:text-xl font-display font-semibold text-foreground mb-2">
               Add a Podcast
             </h3>
-            <p className="text-muted-foreground font-body mb-4 max-w-md mx-auto">
+            <p className="text-sm sm:text-base text-muted-foreground font-body mb-4 max-w-md mx-auto text-pretty">
               Paste a YouTube link and we'll transcribe it, answer your questions, and generate beautiful notes.
             </p>
             <Button className="gradient-primary text-primary-foreground font-body">
@@ -110,7 +108,7 @@ export default function Dashboard() {
           </CardContent>
         </Card>
 
-        <div className="grid lg:grid-cols-3 gap-8">
+        <div className="grid lg:grid-cols-3 gap-6 sm:gap-8">
           {/* Your Interests */}
           <div className="lg:col-span-1 animate-slide-up delay-200">
             <div className="flex items-center justify-between mb-4">
@@ -202,29 +200,29 @@ export default function Dashboard() {
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-3 gap-4 mt-8 animate-slide-up delay-400">
+        <div className="grid grid-cols-3 gap-2 sm:gap-4 mt-6 sm:mt-8 animate-slide-up delay-400">
           <Card className="border border-border">
-            <CardContent className="p-6 text-center">
-              <div className="text-3xl font-display font-bold text-primary mb-1">
+            <CardContent className="p-3 sm:p-6 text-center">
+              <div className="text-2xl sm:text-3xl font-display font-bold text-primary mb-1 tabular-nums">
                 {notes.length}
               </div>
-              <p className="text-sm text-muted-foreground font-body">Notes Created</p>
+              <p className="text-[11px] sm:text-sm text-muted-foreground font-body leading-tight">Notes</p>
             </CardContent>
           </Card>
           <Card className="border border-border">
-            <CardContent className="p-6 text-center">
-              <div className="text-3xl font-display font-bold text-accent mb-1">
+            <CardContent className="p-3 sm:p-6 text-center">
+              <div className="text-2xl sm:text-3xl font-display font-bold text-accent mb-1 tabular-nums">
                 {user.interests.length}
               </div>
-              <p className="text-sm text-muted-foreground font-body">Interests</p>
+              <p className="text-[11px] sm:text-sm text-muted-foreground font-body leading-tight">Topics</p>
             </CardContent>
           </Card>
           <Card className="border border-border">
-            <CardContent className="p-6 text-center">
-              <div className="text-3xl font-display font-bold text-success mb-1">
-                <Sparkles className="w-8 h-8 inline" />
+            <CardContent className="p-3 sm:p-6 text-center">
+              <div className="text-2xl sm:text-3xl font-display font-bold text-success mb-1 flex justify-center">
+                <Sparkles className="w-7 h-7 sm:w-8 sm:h-8 inline" aria-hidden />
               </div>
-              <p className="text-sm text-muted-foreground font-body">AI Powered</p>
+              <p className="text-[11px] sm:text-sm text-muted-foreground font-body leading-tight">AI</p>
             </CardContent>
           </Card>
         </div>

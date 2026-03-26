@@ -2,7 +2,11 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNotes } from '@/contexts/NotesContext';
-import { PREDEFINED_QUESTIONS, Note } from '@/types';
+import { INTEREST_CATEGORIES, PREDEFINED_QUESTIONS, Note, Transcript } from '@/types';
+import { API_BASE } from '@/lib/api';
+import { firebaseDb, isFirebaseConfigured } from '@/lib/firebase';
+import { noteToFirestore, transcriptToFirestore } from '@/lib/firestoreSerial';
+import { doc, writeBatch } from 'firebase/firestore';
 import {
   Dialog,
   DialogContent,
@@ -15,12 +19,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from '@/hooks/use-toast';
-import { 
-  Link2, 
-  Loader2, 
-  Check, 
-  Play, 
-  FileText, 
+import {
+  Loader2,
+  Check,
+  FileText,
   Sparkles,
   Youtube,
   ArrowRight,
@@ -35,6 +37,20 @@ interface ProcessPodcastModalProps {
 
 type Step = 'url' | 'questions' | 'processing' | 'complete';
 
+/** POST /api/podcast/from-youtube response */
+type PipelineResponse = {
+  transcriptId?: string;
+  noteId?: string;
+  firestoreSaved?: boolean;
+  videoTitle: string;
+  sourceType: string;
+  sourceUrl: string;
+  transcript: string;
+  answers: Record<string, string>;
+  summary: string;
+  keyTakeaways: string[];
+};
+
 export default function ProcessPodcastModal({ isOpen, onClose }: ProcessPodcastModalProps) {
   const [step, setStep] = useState<Step>('url');
   const [youtubeUrl, setYoutubeUrl] = useState('');
@@ -42,9 +58,9 @@ export default function ProcessPodcastModal({ isOpen, onClose }: ProcessPodcastM
   const [videoInfo, setVideoInfo] = useState<{ title: string; thumbnail: string } | null>(null);
   const [processingStep, setProcessingStep] = useState(0);
   const [generatedNote, setGeneratedNote] = useState<Note | null>(null);
-  
+
   const { user } = useAuth();
-  const { addNote } = useNotes();
+  const { addNote, addTranscript, setIsProcessing } = useNotes();
   const navigate = useNavigate();
 
   const extractVideoId = (url: string): string | null => {
@@ -52,7 +68,7 @@ export default function ProcessPodcastModal({ isOpen, onClose }: ProcessPodcastM
       /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&\n?#]+)/,
       /youtube\.com\/shorts\/([^&\n?#]+)/,
     ];
-    
+
     for (const pattern of patterns) {
       const match = url.match(pattern);
       if (match) return match[1];
@@ -60,7 +76,7 @@ export default function ProcessPodcastModal({ isOpen, onClose }: ProcessPodcastM
     return null;
   };
 
-  const validateUrl = () => {
+  const validateUrl = async () => {
     const videoId = extractVideoId(youtubeUrl);
     if (!videoId) {
       toast({
@@ -71,12 +87,29 @@ export default function ProcessPodcastModal({ isOpen, onClose }: ProcessPodcastM
       return;
     }
 
-    // Mock video info - in production this would call YouTube API
-    setVideoInfo({
-      title: "Sample Podcast Episode - Understanding AI and the Future",
-      thumbnail: `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`,
-    });
-    
+    try {
+      const r = await fetch(
+        `https://www.youtube.com/oembed?url=${encodeURIComponent(youtubeUrl.trim())}&format=json`,
+      );
+      if (r.ok) {
+        const j = (await r.json()) as { title?: string; thumbnail_url?: string };
+        setVideoInfo({
+          title: j.title ?? 'YouTube video',
+          thumbnail: j.thumbnail_url ?? `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`,
+        });
+      } else {
+        setVideoInfo({
+          title: 'YouTube video',
+          thumbnail: `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`,
+        });
+      }
+    } catch {
+      setVideoInfo({
+        title: 'YouTube video',
+        thumbnail: `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`,
+      });
+    }
+
     setStep('questions');
   };
 
@@ -89,13 +122,15 @@ export default function ProcessPodcastModal({ isOpen, onClose }: ProcessPodcastM
   };
 
   const processSteps = [
-    { label: 'Extracting audio', icon: Play },
-    { label: 'Transcribing content', icon: FileText },
-    { label: 'Analyzing with AI', icon: Sparkles },
-    { label: 'Generating notes', icon: Check },
+    { label: 'Fetching & transcribing (Whisper)', icon: FileText },
+    { label: 'Generating notes (LangChain + interests)', icon: Sparkles },
   ];
 
   const startProcessing = async () => {
+    if (!user) {
+      toast({ title: "Sign in required", description: "Please sign in first.", variant: "destructive" });
+      return;
+    }
     if (selectedQuestions.length === 0) {
       toast({
         title: "Select at least one question",
@@ -106,43 +141,103 @@ export default function ProcessPodcastModal({ isOpen, onClose }: ProcessPodcastM
     }
 
     setStep('processing');
+    setProcessingStep(0);
+    setIsProcessing(true);
 
-    // Simulate processing steps
-    for (let i = 0; i < processSteps.length; i++) {
-      setProcessingStep(i);
-      await new Promise(resolve => setTimeout(resolve, 1500));
-    }
-
-    // Generate mock note
     const videoId = extractVideoId(youtubeUrl);
-    const note: Note = {
-      id: crypto.randomUUID(),
-      userId: user!.id,
-      transcriptId: crypto.randomUUID(),
-      youtubeUrl,
-      title: videoInfo?.title || 'Podcast Episode',
-      thumbnail: videoInfo?.thumbnail || `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`,
-      questions: selectedQuestions,
-      answers: {
-        "What are the main topics discussed?": "This podcast covers artificial intelligence, machine learning fundamentals, and their practical applications in everyday life. The discussion also touches on ethical considerations and future predictions.",
-        "What are the key takeaways?": "1. AI is becoming more accessible to non-technical users\n2. Ethical AI development is crucial\n3. The job market will transform, not disappear\n4. Continuous learning is essential in the AI age",
-        "Who are the speakers/guests?": "The episode features Dr. Sarah Chen, AI researcher at Stanford, and Marcus Williams, tech entrepreneur and author of 'The AI Revolution'.",
-        "What actionable advice is given?": "Start with free AI tools to understand capabilities, take online courses in AI basics, focus on skills that complement AI rather than compete with it, and stay updated with AI news and developments.",
-        "Summary in 3 bullet points": "• AI is transforming industries faster than expected\n• Human creativity and emotional intelligence remain irreplaceable\n• The key to thriving is adaptation and continuous learning",
-      },
-      summary: "A comprehensive discussion on artificial intelligence and its impact on society, featuring expert insights on the future of work, ethical considerations, and practical advice for adapting to an AI-driven world.",
-      keyTakeaways: [
-        "AI is becoming more accessible to non-technical users",
-        "Ethical AI development is crucial for sustainable progress",
-        "The job market will transform rather than disappear",
-        "Continuous learning is essential in the AI age",
-      ],
-      createdAt: new Date(),
-    };
+    const thumb =
+      videoInfo?.thumbnail ??
+      (videoId ? `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg` : '');
 
-    setGeneratedNote(note);
-    addNote(note);
-    setStep('complete');
+    const interestLabels = INTEREST_CATEGORIES.filter((c) => user.interests.includes(c.id)).map(
+      (c) => c.label,
+    );
+
+    try {
+      const pipelineRes = await fetch(`${API_BASE}/api/podcast/from-youtube`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          youtubeUrl: youtubeUrl.trim(),
+          userId: user.id,
+          userInterests: user.interests,
+          userInterestLabels: interestLabels,
+          questions: selectedQuestions,
+          thumbnail: thumb,
+          duration: '',
+        }),
+      });
+      setProcessingStep(1);
+      const payload = await pipelineRes.json().catch(() => ({}));
+      if (!pipelineRes.ok) {
+        const detail =
+          typeof payload?.detail === 'string'
+            ? payload.detail
+            : JSON.stringify(payload?.detail ?? payload);
+        throw new Error(detail || `Pipeline failed (${pipelineRes.status})`);
+      }
+      const data = payload as PipelineResponse;
+
+      const transcriptId = data.transcriptId ?? crypto.randomUUID();
+      const noteId = data.noteId ?? crypto.randomUUID();
+      const transcriptDoc: Transcript = {
+        id: transcriptId,
+        userId: user.id,
+        youtubeUrl: youtubeUrl.trim(),
+        title: data.videoTitle,
+        thumbnail: thumb,
+        transcript: data.transcript,
+        duration: '',
+        createdAt: new Date(),
+      };
+
+      const note: Note = {
+        id: noteId,
+        userId: user.id,
+        transcriptId,
+        youtubeUrl: youtubeUrl.trim(),
+        title: data.videoTitle,
+        thumbnail: thumb,
+        questions: selectedQuestions,
+        answers: data.answers,
+        summary: data.summary,
+        keyTakeaways: data.keyTakeaways,
+        createdAt: new Date(),
+      };
+
+      setGeneratedNote(note);
+
+      if (data.firestoreSaved) {
+        // Backend persisted via Firebase Admin; onSnapshot refreshes notes/transcripts.
+      } else if (isFirebaseConfigured && firebaseDb) {
+        const batch = writeBatch(firebaseDb);
+        batch.set(
+          doc(firebaseDb, 'users', user.id, 'transcripts', transcriptId),
+          transcriptToFirestore(transcriptDoc),
+        );
+        batch.set(doc(firebaseDb, 'users', user.id, 'notes', noteId), noteToFirestore(note));
+        await batch.commit();
+      } else {
+        addTranscript(transcriptDoc);
+        addNote(note);
+      }
+      setProcessingStep(processSteps.length);
+      setStep('complete');
+      toast({
+        title: 'Notes ready',
+        description: 'Transcript and notes are saved to your library.',
+      });
+    } catch (e) {
+      const message = e instanceof Error ? e.message : 'Processing failed.';
+      toast({
+        title: 'Could not finish pipeline',
+        description: message,
+        variant: 'destructive',
+      });
+      setStep('questions');
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   const handleClose = () => {
@@ -164,9 +259,9 @@ export default function ProcessPodcastModal({ isOpen, onClose }: ProcessPodcastM
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-lg">
-        <DialogHeader>
-          <DialogTitle className="font-display text-xl">
+      <DialogContent className="sm:max-w-lg gap-0 sm:gap-4">
+        <DialogHeader className="pr-10 sm:pr-0">
+          <DialogTitle className="font-display text-lg sm:text-xl text-left">
             {step === 'url' && 'Add a Podcast'}
             {step === 'questions' && 'Choose Your Questions'}
             {step === 'processing' && 'Processing Podcast'}
@@ -175,13 +270,12 @@ export default function ProcessPodcastModal({ isOpen, onClose }: ProcessPodcastM
           <DialogDescription className="font-body">
             {step === 'url' && 'Paste a YouTube link to get started'}
             {step === 'questions' && 'Select the questions you want answered'}
-            {step === 'processing' && 'Please wait while we analyze your podcast'}
+            {step === 'processing' && 'Link → transcript → LangChain (your interests + transcript) → notes'}
             {step === 'complete' && 'Your personalized notes have been generated'}
           </DialogDescription>
         </DialogHeader>
 
         <div className="mt-4">
-          {/* Step: URL Input */}
           {step === 'url' && (
             <div className="space-y-4">
               <div className="space-y-2">
@@ -194,7 +288,7 @@ export default function ProcessPodcastModal({ isOpen, onClose }: ProcessPodcastM
                     placeholder="https://youtube.com/watch?v=..."
                     value={youtubeUrl}
                     onChange={(e) => setYoutubeUrl(e.target.value)}
-                    className="pl-11 font-body"
+                    className="pl-11 font-body text-base min-h-[48px]"
                   />
                 </div>
               </div>
@@ -203,14 +297,15 @@ export default function ProcessPodcastModal({ isOpen, onClose }: ProcessPodcastM
                 <div className="flex items-start gap-2">
                   <AlertCircle className="w-4 h-4 text-muted-foreground mt-0.5" />
                   <p className="text-xs text-muted-foreground font-body">
-                    For best results, use podcast episodes that are 10-60 minutes long.
+                    Restart the backend after updating so <code className="text-xs">/api/podcast/from-youtube</code> is
+                    available. Set <code className="text-xs">GEMINI_API_KEY</code> (or GOOGLE_API_KEY) for notes.
                   </p>
                 </div>
               </div>
 
-              <Button 
-                onClick={validateUrl} 
-                className="w-full gradient-primary text-primary-foreground font-body"
+              <Button
+                onClick={() => void validateUrl()}
+                className="w-full min-h-[48px] sm:min-h-10 gradient-primary text-primary-foreground font-body"
                 disabled={!youtubeUrl}
               >
                 Continue
@@ -219,13 +314,12 @@ export default function ProcessPodcastModal({ isOpen, onClose }: ProcessPodcastM
             </div>
           )}
 
-          {/* Step: Questions Selection */}
           {step === 'questions' && (
             <div className="space-y-4">
               {videoInfo && (
                 <div className="flex gap-3 p-3 rounded-lg bg-muted/50 border border-border">
-                  <img 
-                    src={videoInfo.thumbnail} 
+                  <img
+                    src={videoInfo.thumbnail}
                     alt={videoInfo.title}
                     className="w-24 h-16 rounded object-cover"
                   />
@@ -242,7 +336,7 @@ export default function ProcessPodcastModal({ isOpen, onClose }: ProcessPodcastM
                   <label
                     key={question}
                     className={cn(
-                      "flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors",
+                      "flex items-start gap-3 p-3 sm:p-3 rounded-lg border cursor-pointer transition-colors min-h-[52px] active:bg-muted/50",
                       selectedQuestions.includes(question)
                         ? "border-primary bg-primary/5"
                         : "border-border hover:border-primary/50"
@@ -251,15 +345,16 @@ export default function ProcessPodcastModal({ isOpen, onClose }: ProcessPodcastM
                     <Checkbox
                       checked={selectedQuestions.includes(question)}
                       onCheckedChange={() => toggleQuestion(question)}
+                      className="mt-0.5 shrink-0"
                     />
-                    <span className="text-sm font-body text-foreground">{question}</span>
+                    <span className="text-sm font-body text-foreground text-pretty leading-snug">{question}</span>
                   </label>
                 ))}
               </div>
 
-              <Button 
-                onClick={startProcessing} 
-                className="w-full gradient-primary text-primary-foreground font-body"
+              <Button
+                onClick={() => void startProcessing()}
+                className="w-full min-h-[48px] sm:min-h-10 gradient-primary text-primary-foreground font-body"
                 disabled={selectedQuestions.length === 0}
               >
                 <Sparkles className="w-4 h-4 mr-2" />
@@ -268,7 +363,6 @@ export default function ProcessPodcastModal({ isOpen, onClose }: ProcessPodcastM
             </div>
           )}
 
-          {/* Step: Processing */}
           {step === 'processing' && (
             <div className="py-8">
               <div className="space-y-4">
@@ -276,9 +370,9 @@ export default function ProcessPodcastModal({ isOpen, onClose }: ProcessPodcastM
                   const Icon = s.icon;
                   const isComplete = index < processingStep;
                   const isActive = index === processingStep;
-                  
+
                   return (
-                    <div 
+                    <div
                       key={s.label}
                       className={cn(
                         "flex items-center gap-4 p-4 rounded-lg transition-all",
@@ -288,8 +382,8 @@ export default function ProcessPodcastModal({ isOpen, onClose }: ProcessPodcastM
                     >
                       <div className={cn(
                         "w-10 h-10 rounded-full flex items-center justify-center",
-                        isComplete ? "bg-success text-success-foreground" : 
-                        isActive ? "gradient-primary text-primary-foreground" : 
+                        isComplete ? "bg-success text-success-foreground" :
+                        isActive ? "gradient-primary text-primary-foreground" :
                         "bg-muted text-muted-foreground"
                       )}>
                         {isComplete ? (
@@ -310,10 +404,12 @@ export default function ProcessPodcastModal({ isOpen, onClose }: ProcessPodcastM
                   );
                 })}
               </div>
+              <p className="text-xs text-muted-foreground font-body mt-4 text-center">
+                This can take a few minutes on long videos.
+              </p>
             </div>
           )}
 
-          {/* Step: Complete */}
           {step === 'complete' && (
             <div className="text-center py-6">
               <div className="w-16 h-16 rounded-full bg-success/10 flex items-center justify-center mx-auto mb-4">
@@ -325,11 +421,11 @@ export default function ProcessPodcastModal({ isOpen, onClose }: ProcessPodcastM
               <p className="text-sm text-muted-foreground font-body mb-6">
                 Your personalized notes are ready to view.
               </p>
-              <div className="flex gap-3">
-                <Button variant="outline" onClick={handleClose} className="flex-1 font-body">
+              <div className="flex flex-col-reverse sm:flex-row gap-3">
+                <Button variant="outline" onClick={handleClose} className="flex-1 font-body min-h-[48px] sm:min-h-10">
                   Close
                 </Button>
-                <Button onClick={viewNote} className="flex-1 gradient-primary text-primary-foreground font-body">
+                <Button onClick={viewNote} className="flex-1 gradient-primary text-primary-foreground font-body min-h-[48px] sm:min-h-10">
                   View Notes
                 </Button>
               </div>
