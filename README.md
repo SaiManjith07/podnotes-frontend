@@ -1,3 +1,63 @@
+# PodNotes Frontend
+
+## Deployment mode: Vercel frontend + local backend
+
+Use this setup if YouTube extraction is blocked on hosted backends.
+
+### 1) Run backend locally
+
+From `backend/`:
+
+```powershell
+.\venv\Scripts\python.exe -m uvicorn main:app --host 127.0.0.1 --port 5000 --reload
+```
+
+### 2) Expose local backend with HTTPS tunnel
+
+Example with Cloudflare Tunnel:
+
+```powershell
+cloudflared tunnel --url http://127.0.0.1:5000
+```
+
+Copy the generated `https://...trycloudflare.com` URL.
+
+### 3) Configure Vercel env
+
+In Vercel project (`podnotes-frontend`) add:
+
+- `VITE_API_BASE_URL=https://<your-tunnel-url>`
+
+Redeploy frontend.
+
+### 4) CORS on local backend
+
+In `backend/.env`, keep `CORS_ORIGINS` containing:
+
+- `https://podnotes-frontend.vercel.app`
+- local dev origins (`http://localhost:8000`, `http://127.0.0.1:8000`, etc.)
+
+Restart backend after `.env` changes.
+
+### 5) Important
+
+- Tunnel URL changes when restarted (unless you use a paid/static tunnel).
+- Update `VITE_API_BASE_URL` in Vercel whenever tunnel URL changes.
+
+### 6) Mobile demo checklist (same Wi-Fi)
+
+1. On laptop, run:
+   - `backend\start-backend.ps1`
+   - `backend\start-tunnel.ps1`
+2. Confirm tunnel health in browser:
+   - `https://<your-tunnel-url>/api/podcast/health`
+3. In Vercel, set `VITE_API_BASE_URL=https://<your-tunnel-url>` and redeploy.
+4. On phone (same Wi-Fi), open:
+   - `https://podnotes-frontend.vercel.app`
+5. Keep laptop awake and both terminal windows running during demo.
+
+---
+
 # Welcome to your Lovable project
 
 ## Project info
