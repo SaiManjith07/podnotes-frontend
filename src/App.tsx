@@ -43,6 +43,40 @@ const App = () => {
     // #endregion
   }, []);
 
+  useEffect(() => {
+    const onResourceError = (event: Event) => {
+      const target = event.target as HTMLScriptElement | HTMLLinkElement | HTMLImageElement | null;
+      if (!target) return;
+      const src =
+        ("src" in target && target.src) ||
+        ("href" in target && target.href) ||
+        "(unknown)";
+      // #region agent log
+      fetch("http://127.0.0.1:7834/ingest/e70bfa47-b8c9-42cc-82af-74e47d9233d1", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Debug-Session-Id": "4b09f5",
+        },
+        body: JSON.stringify({
+          sessionId: "4b09f5",
+          runId: "resource-404-check",
+          hypothesisId: "H3",
+          location: "src/App.tsx:onResourceError",
+          message: "Window resource load error captured",
+          data: {
+            pathname: typeof window !== "undefined" ? window.location.pathname : "(no-window)",
+            src,
+          },
+          timestamp: Date.now(),
+        }),
+      }).catch(() => {});
+      // #endregion
+    };
+    window.addEventListener("error", onResourceError, true);
+    return () => window.removeEventListener("error", onResourceError, true);
+  }, []);
+
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
