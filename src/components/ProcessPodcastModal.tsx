@@ -63,27 +63,6 @@ export default function ProcessPodcastModal({ isOpen, onClose }: ProcessPodcastM
   const { addNote, addTranscript, setIsProcessing } = useNotes();
   const navigate = useNavigate();
 
-  const debugLog = (runId: string, hypothesisId: string, message: string, data: Record<string, unknown>) => {
-    // #region agent log
-    fetch("http://127.0.0.1:7834/ingest/e70bfa47-b8c9-42cc-82af-74e47d9233d1", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Debug-Session-Id": "4b09f5",
-      },
-      body: JSON.stringify({
-        sessionId: "4b09f5",
-        runId,
-        hypothesisId,
-        location: "src/components/ProcessPodcastModal.tsx:startProcessing",
-        message,
-        data,
-        timestamp: Date.now(),
-      }),
-    }).catch(() => {});
-    // #endregion
-  };
-
   const extractVideoId = (url: string): string | null => {
     const patterns = [
       /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&\n?#]+)/,
@@ -175,13 +154,6 @@ export default function ProcessPodcastModal({ isOpen, onClose }: ProcessPodcastM
     );
 
     try {
-      debugLog("podcast-submit", "H1", "Submitting from-youtube request", {
-        apiBase: API_BASE || "(empty)",
-        endpoint: `${API_BASE}/api/podcast/from-youtube`,
-        hasUser: Boolean(user?.id),
-        questionsCount: selectedQuestions.length,
-        youtubeUrlPrefix: youtubeUrl.trim().slice(0, 48),
-      });
       const pipelineRes = await fetch(`${API_BASE}/api/podcast/from-youtube`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -195,18 +167,8 @@ export default function ProcessPodcastModal({ isOpen, onClose }: ProcessPodcastM
           duration: '',
         }),
       });
-      debugLog("podcast-submit", "H1", "Received from-youtube response metadata", {
-        status: pipelineRes.status,
-        ok: pipelineRes.ok,
-        contentType: pipelineRes.headers.get("content-type") || "(none)",
-      });
       setProcessingStep(1);
       const payload = await pipelineRes.json().catch(() => ({}));
-      debugLog("podcast-submit", "H2", "Parsed from-youtube payload", {
-        status: pipelineRes.status,
-        detailType: typeof (payload as { detail?: unknown })?.detail,
-        hasDetail: Boolean((payload as { detail?: unknown })?.detail),
-      });
       if (!pipelineRes.ok) {
         const detail =
           typeof payload?.detail === 'string'
@@ -267,9 +229,6 @@ export default function ProcessPodcastModal({ isOpen, onClose }: ProcessPodcastM
       });
     } catch (e) {
       const message = e instanceof Error ? e.message : 'Processing failed.';
-      debugLog("podcast-submit", "H4", "Pipeline request failed in catch", {
-        errorMessage: message,
-      });
       toast({
         title: 'Could not finish pipeline',
         description: message,
